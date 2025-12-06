@@ -1,17 +1,28 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, MessageCircle } from 'lucide-react';
+import ChatPanel from '@/components/ChatPanel';
 
 const CoinFlipPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [heads, setHeads] = useState('');
   const [tails, setTails] = useState('');
   const [result, setResult] = useState<string | null>(null);
   const [isFlipping, setIsFlipping] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.options && state.options.length >= 2) {
+      setHeads(state.options[0]);
+      setTails(state.options[1]);
+    }
+  }, [location.state]);
 
   const handleFlip = () => {
     if (!heads.trim() || !tails.trim()) {
@@ -26,6 +37,23 @@ const CoinFlipPage = () => {
       setResult(isHeads ? heads : tails);
       setIsFlipping(false);
     }, 1500);
+  };
+
+  const handleChatAnalysis = (analysis: any) => {
+    if (analysis.action === 'switch' && analysis.tool !== 'coin-flip') {
+      const toolPath = `/${analysis.tool}`;
+      navigate(toolPath, { 
+        state: {
+          options: analysis.options || [],
+          probabilities: analysis.probabilities || []
+        }
+      });
+    } else if (analysis.options && analysis.options.length >= 2) {
+      setHeads(analysis.options[0]);
+      setTails(analysis.options[1]);
+      setResult(null);
+    }
+    setIsChatOpen(false);
   };
 
   return (
@@ -110,6 +138,21 @@ const CoinFlipPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Button
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary hover:bg-primary/90 shadow-lg"
+        size="icon"
+      >
+        <MessageCircle className="w-6 h-6" />
+      </Button>
+
+      <ChatPanel
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        onAnalysisComplete={handleChatAnalysis}
+        currentPage="掷硬币"
+      />
     </div>
   );
 };

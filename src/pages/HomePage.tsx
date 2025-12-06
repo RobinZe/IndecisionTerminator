@@ -1,93 +1,176 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
-import { Coins, Dices, CircleDot, Sparkles, BookOpen } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Sparkles, Send, Loader2 } from 'lucide-react';
+import { sendChatStream } from '@/utils/chat';
+import { useToast } from '@/hooks/use-toast';
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [input, setInput] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const modes = [
-    {
-      id: 'coin-flip',
-      title: '掷硬币',
-      description: '为正反面指定事件，随机选择结果',
-      icon: Coins,
-      path: '/coin-flip',
-      gradient: 'from-primary to-primary-glow'
-    },
-    {
-      id: 'dice-roll',
-      title: '掷色子',
-      description: '语音或文字输入事件，系统识别并随机选择',
-      icon: Dices,
-      path: '/dice-roll',
-      gradient: 'from-secondary to-accent'
-    },
-    {
-      id: 'wheel',
-      title: '概率转盘',
-      description: '自定义条目和概率，生成转盘进行选择',
-      icon: CircleDot,
-      path: '/wheel',
-      gradient: 'from-chart-3 to-chart-1'
-    },
-    {
-      id: 'ai-analysis',
-      title: 'AI分析',
-      description: '智能分析各种情况，提供选择建议',
-      icon: Sparkles,
-      path: '/ai-analysis',
-      gradient: 'from-chart-4 to-chart-5'
-    },
-    {
-      id: 'answer-book',
-      title: '答案之书',
-      description: '随机显示指导性语句帮助决策',
-      icon: BookOpen,
-      path: '/answer-book',
-      gradient: 'from-primary to-secondary'
+  const handleAnalyze = async () => {
+    if (!input.trim()) {
+      toast({
+        title: '请输入内容',
+        description: '请描述您的选择困难',
+        variant: 'destructive'
+      });
+      return;
     }
-  ];
+
+    setIsAnalyzing(true);
+
+    const systemPrompt = `你是一个决策辅助智能体。用户会描述他们的选择困难，你需要：
+1. 分析用户的问题类型
+2. 选择最合适的工具（掷硬币/掷色子/概率转盘/AI分析/答案之书）
+3. 提取用户输入中的具体选项
+
+请严格按照以下JSON格式返回，不要有任何其他文字：
+{
+  "tool": "coin-flip|dice-roll|wheel|ai-analysis|answer-book",
+  "options": ["选项1", "选项2", ...],
+  "probabilities": [50, 50, ...],
+  "reasoning": "选择此工具的原因"
+}
+
+工具选择规则：
+- 掷硬币(coin-flip)：恰好2个选项的简单决策
+- 掷色子(dice-roll)：2-6个选项的决策
+- 概率转盘(wheel)：需要考虑权重的多选项决策，或超过6个选项
+- AI分析(ai-analysis)：需要深入分析优劣势的复杂决策
+- 答案之书(answer-book)：寻求灵感启发的决策`;
+
+    let assistantMessage = '';
+
+    try {
+      await sendChatStream({
+        endpoint: 'https://api-integrations.appmiaoda.com/app-79vic3pdvf9d/api-2bk93oeO9NlE/v2/chat/completions',
+        apiId: import.meta.env.VITE_APP_ID,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: input }
+        ],
+        onUpdate: (content: string) => {
+          assistantMessage = content;
+        },
+        onComplete: () => {
+          setIsAnalyzing(false);
+          try {
+            const jsonMatch = assistantMessage.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const analysis = JSON.parse(jsonMatch[0]);
+              
+              const toolPath = `/${analysis.tool}`;
+              const state = {
+                options: analysis.options || [],
+                probabilities: analysis.probabilities || [],
+                reasoning: analysis.reasoning
+              };
+              
+              navigate(toolPath, { state });
+            } else {
+              throw new Error('无法解析AI响应');
+            }
+          } catch (error) {
+            console.error('解析AI响应失败:', error);
+            toast({
+              title: '分析失败',
+              description: '无法理解您的需求，请尝试更清晰地描述',
+              variant: 'destructive'
+            });
+            setIsAnalyzing(false);
+          }
+        },
+        onError: (error: Error) => {
+          console.error('AI分析错误:', error);
+          setIsAnalyzing(false);
+          toast({
+            title: 'AI分析失败',
+            description: '请稍后重试',
+            variant: 'destructive'
+          });
+        }
+      });
+    } catch (error) {
+      console.error('发送请求失败:', error);
+      setIsAnalyzing(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4">
+      <div className="max-w-3xl w-full">
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold mb-4 gradient-text">
-            选择困难症终结者
-          </h1>
-          <p className="text-xl text-muted-foreground">
-            让决策变得简单有趣，告别选择困难
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Sparkles className="w-12 h-12 text-primary" />
+            <h1 className="text-5xl font-bold gradient-text">
+              选择困难症终结者
+            </h1>
+          </div>
+          <p className="text-xl text-muted-foreground mb-2">
+            AI智能决策助手
+          </p>
+          <p className="text-base text-muted-foreground">
+            告诉我您的选择困难，我会为您选择最合适的决策工具
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {modes.map((mode) => {
-            const Icon = mode.icon;
-            return (
-              <Card
-                key={mode.id}
-                className="card-hover cursor-pointer border-2 overflow-hidden"
-                onClick={() => navigate(mode.path)}
-              >
-                <CardContent className="p-6">
-                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${mode.gradient} flex items-center justify-center mb-4`}>
-                    <Icon className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold mb-2 text-foreground">
-                    {mode.title}
-                  </h3>
-                  <p className="text-muted-foreground">
-                    {mode.description}
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <Card className="border-2 shadow-lg">
+          <CardContent className="p-8">
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-foreground">
+                  描述您的选择困难
+                </label>
+                <Textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="例如：我在考虑今晚吃火锅还是烧烤&#10;或：我需要在三个工作机会中选择一个&#10;或：我想知道是否应该换工作"
+                  disabled={isAnalyzing}
+                  rows={6}
+                  className="resize-none text-base"
+                />
+              </div>
 
-        <div className="mt-16 text-center">
+              <Button
+                onClick={handleAnalyze}
+                disabled={!input.trim() || isAnalyzing}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                size="lg"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    AI正在分析中...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5 mr-2" />
+                    开始分析
+                  </>
+                )}
+              </Button>
+
+              <div className="bg-muted rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium text-foreground">💡 提示</p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• 清晰描述您的选择场景和具体选项</li>
+                  <li>• AI会自动为您选择最合适的决策工具</li>
+                  <li>• 支持简单选择、复杂决策、灵感启发等多种场景</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="mt-8 text-center">
           <p className="text-sm text-muted-foreground">
-            选择一个模式开始你的决策之旅
+            支持掷硬币、掷色子、概率转盘、AI深度分析、答案之书等多种决策方式
           </p>
         </div>
       </div>

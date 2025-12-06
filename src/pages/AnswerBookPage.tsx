@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, BookOpen } from 'lucide-react';
+import { ArrowLeft, BookOpen, MessageCircle } from 'lucide-react';
+import ChatPanel from '@/components/ChatPanel';
 
 const AnswerBookPage = () => {
   const navigate = useNavigate();
   const [answer, setAnswer] = useState<string | null>(null);
   const [isFlipping, setIsFlipping] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const answers = [
     '是的，现在就去做吧',
@@ -71,6 +73,19 @@ const AnswerBookPage = () => {
       setAnswer(answers[randomIndex]);
       setIsFlipping(false);
     }, 1500);
+  };
+
+  const handleChatAnalysis = (analysis: any) => {
+    if (analysis.action === 'switch' && analysis.tool !== 'answer-book') {
+      const toolPath = `/${analysis.tool}`;
+      navigate(toolPath, { 
+        state: {
+          options: analysis.options || [],
+          probabilities: analysis.probabilities || []
+        }
+      });
+    }
+    setIsChatOpen(false);
   };
 
   return (
@@ -147,6 +162,21 @@ const AnswerBookPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Button
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary hover:bg-primary/90 shadow-lg"
+        size="icon"
+      >
+        <MessageCircle className="w-6 h-6" />
+      </Button>
+
+      <ChatPanel
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        onAnalysisComplete={handleChatAnalysis}
+        currentPage="答案之书"
+      />
     </div>
   );
 };
