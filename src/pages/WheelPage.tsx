@@ -293,6 +293,15 @@ const WheelPage = () => {
             <CardContent className="space-y-6">
               <div className="flex justify-center py-8">
                 <div className="relative w-64 h-64">
+                  {/* 顶部指针 - 固定不动 */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 z-10" style={{ top: '-8px' }}>
+                    <div className="flex flex-col items-center">
+                      <div className="w-0 h-0 border-l-[16px] border-r-[16px] border-t-[24px] border-l-transparent border-r-transparent border-t-red-600 drop-shadow-lg" />
+                      <div className="w-1 h-4 bg-red-600" />
+                    </div>
+                  </div>
+                  
+                  {/* 转盘 - 旋转 */}
                   <svg
                     viewBox="0 0 200 200"
                     className="w-full h-full"
@@ -317,11 +326,23 @@ const WheelPage = () => {
                       const textX = 100 + 60 * Math.cos(textAngle * Math.PI / 180);
                       const textY = 100 + 60 * Math.sin(textAngle * Math.PI / 180);
 
+                      // 定义低饱和度的颜色数组
+                      const colors = [
+                        'hsl(210, 40%, 65%)',  // 柔和蓝色
+                        'hsl(150, 35%, 60%)',  // 柔和绿色
+                        'hsl(30, 45%, 65%)',   // 柔和橙色
+                        'hsl(280, 35%, 65%)',  // 柔和紫色
+                        'hsl(350, 40%, 65%)',  // 柔和红色
+                        'hsl(180, 35%, 60%)',  // 柔和青色
+                        'hsl(60, 40%, 65%)',   // 柔和黄色
+                        'hsl(320, 35%, 65%)',  // 柔和粉色
+                      ];
+
                       return (
                         <g key={item.id}>
                           <path
                             d={`M 100 100 L ${x1} ${y1} A 90 90 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                            className={`fill-current text-primary opacity-${90 - index * 10}`}
+                            fill={colors[index % colors.length]}
                             stroke="white"
                             strokeWidth="2"
                           />
@@ -330,7 +351,7 @@ const WheelPage = () => {
                             y={textY}
                             textAnchor="middle"
                             dominantBaseline="middle"
-                            className="fill-white font-bold text-xs"
+                            className="fill-gray-800 font-bold text-xs"
                             transform={`rotate(${textAngle + 90}, ${textX}, ${textY})`}
                           >
                             {item.name.length > 6 ? item.name.slice(0, 6) + '...' : item.name}
@@ -338,11 +359,9 @@ const WheelPage = () => {
                         </g>
                       );
                     })}
-                    <circle cx="100" cy="100" r="15" fill="white" />
+                    {/* 中心圆 */}
+                    <circle cx="100" cy="100" r="15" fill="white" stroke="#333" strokeWidth="2" />
                   </svg>
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2">
-                    <div className="w-0 h-0 border-l-8 border-r-8 border-t-12 border-l-transparent border-r-transparent border-t-red-500" />
-                  </div>
                 </div>
               </div>
 
