@@ -168,10 +168,86 @@ const HomePage = () => {
           </CardContent>
         </Card>
 
-        <div className="mt-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            支持掷硬币、掷色子、概率转盘、AI深度分析、答案之书等多种决策方式
+        <div className="mt-12">
+          <p className="text-center text-sm font-medium text-foreground mb-6">
+            支持以下决策方式：
           </p>
+          <div className="grid grid-cols-2 gap-4">
+            <Card
+              className="cursor-pointer border-2 hover:border-primary hover:shadow-lg transition-all"
+              onClick={() => navigate('/coin-flip')}
+            >
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">🪙</span>
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-foreground">掷硬币</h3>
+                  <p className="text-xs text-muted-foreground">二选一决策</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer border-2 hover:border-primary hover:shadow-lg transition-all"
+              onClick={() => navigate('/dice-roll')}
+            >
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-secondary to-accent flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">🎲</span>
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-foreground">掷色子</h3>
+                  <p className="text-xs text-muted-foreground">2-6个选项</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer border-2 hover:border-primary hover:shadow-lg transition-all"
+              onClick={() => navigate('/wheel')}
+            >
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-chart-3 to-chart-1 flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">🎡</span>
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-foreground">概率转盘</h3>
+                  <p className="text-xs text-muted-foreground">自定义权重</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer border-2 hover:border-primary hover:shadow-lg transition-all"
+              onClick={() => navigate('/ai-analysis')}
+            >
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-chart-4 to-chart-5 flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">✨</span>
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-foreground">AI分析</h3>
+                  <p className="text-xs text-muted-foreground">深度分析</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              className="cursor-pointer border-2 hover:border-primary hover:shadow-lg transition-all col-span-2"
+              onClick={() => navigate('/answer-book')}
+            >
+              <CardContent className="p-4 flex items-center gap-3 justify-center">
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
+                  <span className="text-2xl">📖</span>
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-foreground">答案之书</h3>
+                  <p className="text-xs text-muted-foreground">寻求灵感启发</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

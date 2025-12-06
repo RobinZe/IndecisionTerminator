@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Plus, Trash2, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Send, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import ChatPanel from '@/components/ChatPanel';
+import { sendChatStream } from '@/utils/chat';
 
 interface WheelItem {
   id: string;
@@ -25,7 +25,8 @@ const WheelPage = () => {
   const [result, setResult] = useState<string | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     const state = location.state as any;
@@ -118,38 +119,97 @@ const WheelPage = () => {
     }, 3000);
   };
 
-  const handleChatAnalysis = (analysis: any) => {
-    if (analysis.action === 'switch' && analysis.tool !== 'wheel') {
-      const toolPath = `/${analysis.tool}`;
-      navigate(toolPath, { 
-        state: {
-          options: analysis.options || [],
-          probabilities: analysis.probabilities || []
+  const handleChatSubmit = async () => {
+    if (!chatInput.trim() || isAnalyzing) return;
+
+    const userInput = chatInput.trim();
+    setChatInput('');
+    setIsAnalyzing(true);
+
+    const systemPrompt = `你是一个决策辅助智能体。用户正在使用概率转盘功能，他们可能想要：
+1. 修改当前功能的参数
+2. 切换到其他功能
+
+请严格按照以下JSON格式返回，不要有任何其他文字：
+{
+  "action": "modify|switch",
+  "tool": "coin-flip|dice-roll|wheel|ai-analysis|answer-book",
+  "options": ["选项1", "选项2", ...],
+  "probabilities": [50, 50, ...],
+  "reasoning": "操作原因"
+}`;
+
+    let assistantMessage = '';
+
+    try {
+      await sendChatStream({
+        endpoint: 'https://api-integrations.appmiaoda.com/app-79vic3pdvf9d/api-2bk93oeO9NlE/v2/chat/completions',
+        apiId: import.meta.env.VITE_APP_ID,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userInput }
+        ],
+        onUpdate: (content: string) => {
+          assistantMessage = content;
+        },
+        onComplete: () => {
+          setIsAnalyzing(false);
+          try {
+            const jsonMatch = assistantMessage.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const analysis = JSON.parse(jsonMatch[0]);
+              
+              if (analysis.action === 'switch' && analysis.tool !== 'wheel') {
+                const toolPath = `/${analysis.tool}`;
+                navigate(toolPath, { 
+                  state: {
+                    options: analysis.options || [],
+                    probabilities: analysis.probabilities || []
+                  }
+                });
+              } else if (analysis.options && analysis.options.length > 0) {
+                const newItems: WheelItem[] = analysis.options.map((opt: string, idx: number) => ({
+                  id: Date.now().toString() + idx,
+                  name: opt,
+                  probability: analysis.probabilities?.[idx] || (100 / analysis.options.length)
+                }));
+                setItems(newItems);
+                setResult(null);
+                toast({
+                  title: '参数已更新',
+                  description: analysis.reasoning
+                });
+              }
+            } else {
+              throw new Error('无法解析AI响应');
+            }
+          } catch (error) {
+            console.error('解析AI响应失败:', error);
+            toast({
+              title: '分析失败',
+              description: '无法理解您的需求，请尝试更清晰地描述',
+              variant: 'destructive'
+            });
+          }
+        },
+        onError: (error: Error) => {
+          console.error('AI分析错误:', error);
+          setIsAnalyzing(false);
+          toast({
+            title: 'AI分析失败',
+            description: '请稍后重试',
+            variant: 'destructive'
+          });
         }
       });
-    } else if (analysis.options && analysis.options.length > 0) {
-      const newItems: WheelItem[] = analysis.options.map((opt: string, idx: number) => ({
-        id: Date.now().toString() + idx,
-        name: opt,
-        probability: analysis.probabilities?.[idx] || (100 / analysis.options.length)
-      }));
-      setItems(newItems);
-      setResult(null);
+    } catch (error) {
+      console.error('发送请求失败:', error);
+      setIsAnalyzing(false);
     }
-    setIsChatOpen(false);
   };
 
-  const colors = [
-    'from-primary to-primary-glow',
-    'from-secondary to-accent',
-    'from-chart-1 to-chart-2',
-    'from-chart-3 to-chart-4',
-    'from-chart-5 to-primary',
-    'from-accent to-secondary'
-  ];
-
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
+    <div className="min-h-screen bg-background py-12 px-4 pb-32">
       <div className="max-w-4xl mx-auto">
         <Button
           variant="ghost"
@@ -306,20 +366,35 @@ const WheelPage = () => {
         </div>
       </div>
 
-      <Button
-        onClick={() => setIsChatOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary hover:bg-primary/90 shadow-lg"
-        size="icon"
-      >
-        <MessageCircle className="w-6 h-6" />
-      </Button>
-
-      <ChatPanel
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        onAnalysisComplete={handleChatAnalysis}
-        currentPage="概率转盘"
-      />
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t-2 border-border p-4">
+        <div className="max-w-4xl mx-auto flex gap-2">
+          <Input
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            placeholder="对当前方案不满意？输入修改要求..."
+            disabled={isAnalyzing}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleChatSubmit();
+              }
+            }}
+            className="flex-1"
+          />
+          <Button
+            onClick={handleChatSubmit}
+            disabled={!chatInput.trim() || isAnalyzing}
+            size="icon"
+            className="bg-primary hover:bg-primary/90"
+          >
+            {isAnalyzing ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };

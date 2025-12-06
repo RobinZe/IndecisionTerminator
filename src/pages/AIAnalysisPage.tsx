@@ -1,41 +1,34 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { ArrowLeft, Send, StopCircle, Loader2, MessageCircle } from 'lucide-react';
-import { sendChatStream } from '@/utils/chat';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, Send, Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import ChatPanel from '@/components/ChatPanel';
+import { sendChatStream } from '@/utils/chat';
 
 const AIAnalysisPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const [input, setInput] = useState('');
+  const [question, setQuestion] = useState('');
   const [analysis, setAnalysis] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const analysisEndRef = useRef<HTMLDivElement>(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatAnalyzing, setIsChatAnalyzing] = useState(false);
 
   useEffect(() => {
     const state = location.state as any;
-    if (state?.options && state.options.length > 0) {
-      const optionsText = state.options.join('、');
-      setInput(`我需要在以下选项中做出选择：${optionsText}\n\n请帮我分析每个选项的优劣势，并给出建议。`);
+    if (state?.question) {
+      setQuestion(state.question);
     }
   }, [location.state]);
 
-  useEffect(() => {
-    analysisEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [analysis]);
-
   const handleAnalyze = async () => {
-    if (!input.trim()) {
+    if (!question.trim()) {
       toast({
-        title: '请输入内容',
+        title: '请输入问题',
         description: '请描述您的选择困难',
         variant: 'destructive'
       });
@@ -44,20 +37,18 @@ const AIAnalysisPage = () => {
 
     setIsAnalyzing(true);
     setAnalysis('');
-    abortControllerRef.current = new AbortController();
 
-    const systemPrompt = `你是一个专业的决策分析助手。用户会向你描述他们的选择困难，你需要：
-1. 理解用户的具体情况和需求
-2. 分析每个选项的优势和劣势
-3. 考虑短期和长期影响
-4. 提供客观、理性的建议
-5. 帮助用户做出更明智的决策
+    const systemPrompt = `你是一个专业的决策分析助手。用户会向你描述他们的选择困难，请你：
+1. 分析各个选项的优劣势
+2. 考虑短期和长期影响
+3. 提供客观的建议
+4. 给出明确的推荐
 
-请用清晰、有条理的方式呈现你的分析，包括：
-- 问题总结
-- 各选项分析
+请用清晰、结构化的方式回答，包含：
+- 问题分析
+- 各选项优劣
 - 综合建议
-- 决策要点`;
+- 最终推荐`;
 
     try {
       await sendChatStream({
@@ -65,7 +56,7 @@ const AIAnalysisPage = () => {
         apiId: import.meta.env.VITE_APP_ID,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: input }
+          { role: 'user', content: question }
         ],
         onUpdate: (content: string) => {
           setAnalysis(content);
@@ -81,8 +72,7 @@ const AIAnalysisPage = () => {
             description: '请稍后重试',
             variant: 'destructive'
           });
-        },
-        signal: abortControllerRef.current.signal
+        }
       });
     } catch (error) {
       console.error('发送请求失败:', error);
@@ -90,37 +80,93 @@ const AIAnalysisPage = () => {
     }
   };
 
-  const handleStop = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      setIsAnalyzing(false);
-    }
-  };
+  const handleChatSubmit = async () => {
+    if (!chatInput.trim() || isChatAnalyzing) return;
 
-  const handleReset = () => {
-    setInput('');
-    setAnalysis('');
-  };
+    const userInput = chatInput.trim();
+    setChatInput('');
+    setIsChatAnalyzing(true);
 
-  const handleChatAnalysis = (chatAnalysis: any) => {
-    if (chatAnalysis.action === 'switch' && chatAnalysis.tool !== 'ai-analysis') {
-      const toolPath = `/${chatAnalysis.tool}`;
-      navigate(toolPath, { 
-        state: {
-          options: chatAnalysis.options || [],
-          probabilities: chatAnalysis.probabilities || []
+    const systemPrompt = `你是一个决策辅助智能体。用户正在使用AI分析功能，他们可能想要：
+1. 修改当前问题
+2. 切换到其他功能
+
+请严格按照以下JSON格式返回，不要有任何其他文字：
+{
+  "action": "modify|switch",
+  "tool": "coin-flip|dice-roll|wheel|ai-analysis|answer-book",
+  "options": ["选项1", "选项2", ...],
+  "probabilities": [50, 50, ...],
+  "question": "新的问题",
+  "reasoning": "操作原因"
+}`;
+
+    let assistantMessage = '';
+
+    try {
+      await sendChatStream({
+        endpoint: 'https://api-integrations.appmiaoda.com/app-79vic3pdvf9d/api-2bk93oeO9NlE/v2/chat/completions',
+        apiId: import.meta.env.VITE_APP_ID,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userInput }
+        ],
+        onUpdate: (content: string) => {
+          assistantMessage = content;
+        },
+        onComplete: () => {
+          setIsChatAnalyzing(false);
+          try {
+            const jsonMatch = assistantMessage.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const analysisResult = JSON.parse(jsonMatch[0]);
+              
+              if (analysisResult.action === 'switch' && analysisResult.tool !== 'ai-analysis') {
+                const toolPath = `/${analysisResult.tool}`;
+                navigate(toolPath, { 
+                  state: {
+                    options: analysisResult.options || [],
+                    probabilities: analysisResult.probabilities || []
+                  }
+                });
+              } else if (analysisResult.question) {
+                setQuestion(analysisResult.question);
+                setAnalysis('');
+                toast({
+                  title: '问题已更新',
+                  description: analysisResult.reasoning
+                });
+              }
+            } else {
+              throw new Error('无法解析AI响应');
+            }
+          } catch (error) {
+            console.error('解析AI响应失败:', error);
+            toast({
+              title: '分析失败',
+              description: '无法理解您的需求，请尝试更清晰地描述',
+              variant: 'destructive'
+            });
+          }
+        },
+        onError: (error: Error) => {
+          console.error('AI分析错误:', error);
+          setIsChatAnalyzing(false);
+          toast({
+            title: 'AI分析失败',
+            description: '请稍后重试',
+            variant: 'destructive'
+          });
         }
       });
-    } else if (chatAnalysis.options && chatAnalysis.options.length > 0) {
-      const optionsText = chatAnalysis.options.join('、');
-      setInput(`我需要在以下选项中做出选择：${optionsText}\n\n请帮我分析每个选项的优劣势，并给出建议。`);
-      setAnalysis('');
+    } catch (error) {
+      console.error('发送请求失败:', error);
+      setIsChatAnalyzing(false);
     }
-    setIsChatOpen(false);
   };
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
+    <div className="min-h-screen bg-background py-12 px-4 pb-32">
       <div className="max-w-4xl mx-auto">
         <Button
           variant="ghost"
@@ -133,106 +179,92 @@ const AIAnalysisPage = () => {
 
         <Card className="border-2">
           <CardHeader>
-            <CardTitle className="text-3xl text-center gradient-text">
+            <CardTitle className="text-3xl text-center gradient-text flex items-center justify-center gap-2">
+              <Sparkles className="w-8 h-8" />
               AI深度分析
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="question">描述您的选择困难</Label>
               <Textarea
-                id="question"
-                placeholder="例如：我在考虑是否要换工作。目前的工作稳定但发展空间有限，新工作薪资更高但需要搬家..."
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
+                placeholder="请详细描述您的选择困难，包括各个选项和您的考虑因素..."
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
                 disabled={isAnalyzing}
                 rows={6}
                 className="resize-none"
               />
             </div>
 
-            <div className="flex gap-2">
-              {!isAnalyzing ? (
+            <Button
+              onClick={handleAnalyze}
+              disabled={!question.trim() || isAnalyzing}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+              size="lg"
+            >
+              {isAnalyzing ? (
                 <>
-                  <Button
-                    onClick={handleAnalyze}
-                    disabled={!input.trim()}
-                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-                    size="lg"
-                  >
-                    <Send className="w-5 h-5 mr-2" />
-                    开始分析
-                  </Button>
-                  {analysis && (
-                    <Button
-                      onClick={handleReset}
-                      variant="outline"
-                      size="lg"
-                    >
-                      重新提问
-                    </Button>
-                  )}
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  AI分析中...
                 </>
               ) : (
-                <Button
-                  onClick={handleStop}
-                  variant="destructive"
-                  className="flex-1"
-                  size="lg"
-                >
-                  <StopCircle className="w-5 h-5 mr-2" />
-                  停止分析
-                </Button>
+                <>
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  开始分析
+                </>
               )}
-            </div>
+            </Button>
 
-            {(analysis || isAnalyzing) && (
-              <div className="space-y-2">
-                <Label>AI分析结果</Label>
-                <div className="min-h-[200px] max-h-[500px] overflow-y-auto p-4 rounded-lg bg-muted">
-                  <div className="prose prose-sm max-w-none">
-                    <p className="whitespace-pre-wrap text-foreground">{analysis}</p>
-                    {isAnalyzing && (
-                      <span className="inline-flex items-center gap-1 text-primary">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        分析中...
-                      </span>
-                    )}
-                    <div ref={analysisEndRef} />
-                  </div>
+            {analysis && (
+              <div className="mt-6 p-6 bg-muted rounded-lg space-y-4">
+                <div className="flex items-center gap-2 text-primary font-bold text-lg">
+                  <Sparkles className="w-5 h-5" />
+                  AI分析结果
+                </div>
+                <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap">
+                  {analysis}
                 </div>
               </div>
             )}
 
-            {!analysis && !isAnalyzing && (
-              <div className="bg-muted rounded-lg p-4 space-y-2">
-                <p className="text-sm font-medium text-foreground">💡 使用提示</p>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• 详细描述您的选择场景和各个选项</li>
-                  <li>• 说明您关注的重点因素（如时间、金钱、发展等）</li>
-                  <li>• AI会从多个角度为您分析利弊</li>
-                  <li>• 分析结果仅供参考，最终决定权在您</li>
-                </ul>
+            {analysis && !isAnalyzing && (
+              <div className="text-center text-sm text-muted-foreground">
+                💡 以上分析仅供参考，最终决定权在您手中
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      <Button
-        onClick={() => setIsChatOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary hover:bg-primary/90 shadow-lg"
-        size="icon"
-      >
-        <MessageCircle className="w-6 h-6" />
-      </Button>
-
-      <ChatPanel
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        onAnalysisComplete={handleChatAnalysis}
-        currentPage="AI分析"
-      />
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t-2 border-border p-4">
+        <div className="max-w-4xl mx-auto flex gap-2">
+          <Input
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            placeholder="对当前方案不满意？输入修改要求..."
+            disabled={isChatAnalyzing}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleChatSubmit();
+              }
+            }}
+            className="flex-1"
+          />
+          <Button
+            onClick={handleChatSubmit}
+            disabled={!chatInput.trim() || isChatAnalyzing}
+            size="icon"
+            className="bg-primary hover:bg-primary/90"
+          >
+            {isChatAnalyzing ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
