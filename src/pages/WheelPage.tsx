@@ -93,24 +93,39 @@ const WheelPage = () => {
     setIsSpinning(true);
     setResult(null);
 
+    // 根据概率选择结果
     const random = Math.random() * 100;
     let cumulative = 0;
     let selectedItem: WheelItem | null = null;
+    let selectedIndex = 0;
 
-    for (const item of filledItems) {
-      cumulative += Number(item.probability);
+    for (let i = 0; i < filledItems.length; i++) {
+      cumulative += Number(filledItems[i].probability);
       if (random <= cumulative) {
-        selectedItem = item;
+        selectedItem = filledItems[i];
+        selectedIndex = i;
         break;
       }
     }
 
     if (!selectedItem) {
       selectedItem = filledItems[filledItems.length - 1];
+      selectedIndex = filledItems.length - 1;
     }
 
-    const spins = 5 + Math.random() * 3;
-    const newRotation = rotation + 360 * spins;
+    // 计算选中项的中心角度
+    let targetAngle = 0;
+    for (let i = 0; i < selectedIndex; i++) {
+      targetAngle += (Number(filledItems[i].probability) / 100) * 360;
+    }
+    targetAngle += ((Number(selectedItem.probability) / 100) * 360) / 2;
+
+    // 计算最终旋转角度：多转几圈 + 目标角度
+    // 指针在顶部（0度），所以目标角度需要调整
+    const spins = 5 + Math.random() * 2;
+    const finalAngle = 360 * spins + (360 - targetAngle);
+    const newRotation = rotation + finalAngle;
+    
     setRotation(newRotation);
 
     setTimeout(() => {
@@ -209,29 +224,29 @@ const WheelPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4 pb-32">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-background py-8 px-4 pb-28">
+      <div className="max-w-6xl mx-auto">
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
-          className="mb-6"
+          className="mb-4"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           返回首页
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card className="border-2">
-            <CardHeader>
-              <CardTitle className="text-2xl gradient-text">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl gradient-text">
                 设置选项
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               {items.map((item, index) => (
                 <div key={item.id} className="flex gap-2 items-end">
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor={`name-${item.id}`}>选项 {index + 1}</Label>
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor={`name-${item.id}`} className="text-sm">选项 {index + 1}</Label>
                     <Input
                       id={`name-${item.id}`}
                       placeholder="输入选项名称"
@@ -240,8 +255,8 @@ const WheelPage = () => {
                       disabled={isSpinning}
                     />
                   </div>
-                  <div className="w-24 space-y-2">
-                    <Label htmlFor={`prob-${item.id}`}>概率</Label>
+                  <div className="w-20 space-y-1">
+                    <Label htmlFor={`prob-${item.id}`} className="text-sm">概率</Label>
                     <Input
                       id={`prob-${item.id}`}
                       type="number"
@@ -250,6 +265,7 @@ const WheelPage = () => {
                       value={item.probability}
                       onChange={(e) => updateItem(item.id, 'probability', Number(e.target.value))}
                       disabled={isSpinning}
+                      className="text-sm"
                     />
                   </div>
                   <Button
@@ -257,6 +273,7 @@ const WheelPage = () => {
                     size="icon"
                     onClick={() => removeItem(item.id)}
                     disabled={items.length <= 2 || isSpinning}
+                    className="h-9 w-9"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
@@ -266,7 +283,7 @@ const WheelPage = () => {
               <Button
                 onClick={addItem}
                 variant="outline"
-                className="w-full"
+                className="w-full h-9"
                 disabled={isSpinning}
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -276,7 +293,7 @@ const WheelPage = () => {
               <Button
                 onClick={normalizeProbabilities}
                 variant="secondary"
-                className="w-full"
+                className="w-full h-9"
                 disabled={isSpinning}
               >
                 归一化概率
@@ -285,13 +302,13 @@ const WheelPage = () => {
           </Card>
 
           <Card className="border-2">
-            <CardHeader>
-              <CardTitle className="text-2xl text-center gradient-text">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl text-center gradient-text">
                 概率转盘
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex justify-center py-8">
+            <CardContent className="space-y-4">
+              <div className="flex justify-center py-4">
                 <div className="relative w-64 h-64">
                   {/* 顶部指针 - 固定不动 */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 z-10" style={{ top: '-8px' }}>
@@ -366,17 +383,16 @@ const WheelPage = () => {
               </div>
 
               {result && !isSpinning && (
-                <div className="text-center space-y-2 p-4 bg-primary/10 rounded-lg">
-                  <p className="text-lg text-muted-foreground">结果是</p>
-                  <p className="text-3xl font-bold text-primary">{result}</p>
+                <div className="text-center space-y-1 p-3 bg-primary/10 rounded-lg">
+                  <p className="text-sm text-muted-foreground">结果是</p>
+                  <p className="text-2xl font-bold text-primary">{result}</p>
                 </div>
               )}
 
               <Button
                 onClick={handleSpin}
                 disabled={isSpinning || items.filter(i => i.name.trim()).length < 2}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                size="lg"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-10"
               >
                 {isSpinning ? '转盘旋转中...' : result ? '再次转动' : '开始转盘'}
               </Button>
@@ -385,8 +401,8 @@ const WheelPage = () => {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t-2 border-border p-4">
-        <div className="max-w-4xl mx-auto flex gap-2">
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-3">
+        <div className="max-w-6xl mx-auto flex gap-2">
           <Input
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
