@@ -158,8 +158,6 @@ const WheelPage = () => {
 
     try {
       await sendChatStream({
-        endpoint: 'https://api-integrations.appmiaoda.com/app-79vic3pdvf9d/api-2bk93oeO9NlE/v2/chat/completions',
-        apiId: import.meta.env.VITE_APP_ID,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userInput }

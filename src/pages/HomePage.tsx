@@ -39,8 +39,8 @@ const HomePage = () => {
 }
 
 工具选择规则：
-- 掷硬币(coin-flip)：恰好2个选项的简单决策
-- 掷色子(dice-roll)：2-6个选项的决策
+- 掷硬币(coin-flip)：恰好2个概率相等的选项的简单决策
+- 掷色子(dice-roll)：3个或6个概率相等的选项的决策
 - 概率转盘(wheel)：需要考虑权重的多选项决策，或超过6个选项
 - AI分析(ai-analysis)：需要深入分析优劣势的复杂决策
 - 答案之书(answer-book)：寻求灵感启发的决策`;
@@ -49,8 +49,6 @@ const HomePage = () => {
 
     try {
       await sendChatStream({
-        endpoint: 'https://api-integrations.appmiaoda.com/app-79vic3pdvf9d/api-2bk93oeO9NlE/v2/chat/completions',
-        apiId: import.meta.env.VITE_APP_ID,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: input }

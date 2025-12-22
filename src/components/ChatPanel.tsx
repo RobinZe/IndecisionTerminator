@@ -53,8 +53,8 @@ const ChatPanel = ({ isOpen, onClose, onAnalysisComplete, currentPage }: ChatPan
 }
 
 工具选择规则：
-- 掷硬币(coin-flip)：恰好2个选项的简单决策
-- 掷色子(dice-roll)：2-6个选项的决策
+- 掷硬币(coin-flip)：恰好2个概率相等的选项的简单决策
+- 掷色子(dice-roll)：3个或6个概率相等的选项的决策
 - 概率转盘(wheel)：需要考虑权重的多选项决策，或超过6个选项
 - AI分析(ai-analysis)：需要深入分析优劣势的复杂决策
 - 答案之书(answer-book)：寻求灵感启发的决策`;
@@ -62,6 +62,13 @@ const ChatPanel = ({ isOpen, onClose, onAnalysisComplete, currentPage }: ChatPan
       systemPrompt = `你是一个决策辅助智能体。用户正在使用${currentPage}功能，他们可能想要：
 1. 修改当前功能的参数
 2. 切换到其他功能
+
+参考以下工具选择规则，首先确定是否需要切换功能，其次确认功能参数：
+- 掷硬币(coin-flip)：恰好2个概率相等的选项的简单决策
+- 掷色子(dice-roll)：3个或6个概率相等的选项的决策
+- 概率转盘(wheel)：需要考虑权重的多选项决策，或超过6个选项
+- AI分析(ai-analysis)：需要深入分析优劣势的复杂决策
+- 答案之书(answer-book)：寻求灵感启发的决策
 
 请严格按照以下JSON格式返回，不要有任何其他文字：
 {
@@ -78,8 +85,6 @@ const ChatPanel = ({ isOpen, onClose, onAnalysisComplete, currentPage }: ChatPan
 
     try {
       await sendChatStream({
-        endpoint: 'https://api-integrations.appmiaoda.com/app-79vic3pdvf9d/api-2bk93oeO9NlE/v2/chat/completions',
-        apiId: import.meta.env.VITE_APP_ID,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userMessage }

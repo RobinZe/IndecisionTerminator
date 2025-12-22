@@ -3,9 +3,15 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "echo 'Do not use this command, only use lint to check'",
-    "build": "echo 'Do not use this command, only use lint to check'",
-    "lint": "tsgo -p tsconfig.check.json; npx biome lint; rules/check.sh"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit && npx biome lint --write && rules/check.sh",
+    "lint:check": "tsc --noEmit && npx biome lint && rules/check.sh",
+    "type-check": "tsc --noEmit",
+    "format": "npx biome format --write",
+    "format:check": "npx biome format",
+    "vercel-build": "npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

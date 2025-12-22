@@ -1,8 +1,14 @@
+/**
+ * 聊天相关工具函数
+ * 使用新的AI服务封装
+ */
+
 import ky, { type KyResponse, type AfterResponseHook, type NormalizedOptions } from 'ky';
 import {
   createParser,
   type EventSourceParser
 } from 'eventsource-parser';
+import { streamChatResponse, defaultAIService, type AIProvider } from '../services/aiService';
 
 export interface SSEOptions {
   onData: (data: string) => void;
@@ -85,65 +91,102 @@ export interface ChatMessage {
 }
 
 export interface ChatStreamOptions {
-  endpoint: string;
+  endpoint?: string; // 保持向后兼容，但现在可选
   messages: ChatMessage[];
-  apiId: string;
+  apiId?: string; // 保持向后兼容，但现在可选
   onUpdate: (content: string) => void;
   onComplete: () => void;
   onError: (error: Error) => void;
   signal?: AbortSignal;
+  provider?: AIProvider; // 新增：AI厂商选择
 }
 
-export const sendChatStream = async (options: ChatStreamOptions): Promise<void> => {
-  const { messages, onUpdate, onComplete, onError, signal } = options;
-
+// 新的流式聊天实现，使用AI服务封装
+export const sendChatStreamNew = async (options: ChatStreamOptions): Promise<void> => {
+  const { messages, onUpdate, onComplete, onError, signal, provider } = options;
+  
   let currentContent = '';
 
-  const sseHook = createSSEHook({
-    onData: (data: string) => {
-      try {
-        const parsed = JSON.parse(data);
-        if (parsed.choices?.[0]?.delta?.content) {
-          currentContent += parsed.choices[0].delta.content;
-          onUpdate(currentContent);
-        }
-      } catch {
-        console.warn('Failed to parse SSE data:', data);
-      }
-    },
-    onCompleted: (error?: Error) => {
-      if (error) {
-        onError(error);
-      } else {
-        onComplete();
-      }
-    },
-    onAborted: () => {
-      console.log('Stream aborted');
-    }
-  });
-
   try {
-    await ky.post(options.endpoint, {
-      json: {
-        messages: messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
-        enable_thinking: false
-      },
-      headers: {
-        'X-App-Id': options.apiId,
-        'Content-Type': 'application/json'
-      },
-      signal,
-      hooks: {
-        afterResponse: [sseHook]
+    const stream = provider 
+      ? streamChatResponse(messages.map(msg => ({ role: msg.role, content: msg.content })), provider)
+      : defaultAIService.sendChatStream(messages.map(msg => ({ role: msg.role, content: msg.content })));
+
+    for await (const chunk of stream) {
+      if (signal?.aborted) {
+        break;
       }
-    });
+      currentContent += chunk;
+      onUpdate(currentContent);
+    }
+
+    if (!signal?.aborted) {
+      onComplete();
+    }
   } catch (error) {
     if (!signal?.aborted) {
-      onError(error as Error);
+      onError(error instanceof Error ? error : new Error('Unknown error'));
     }
+  }
+};
+
+// 保持原有接口向后兼容，但内部使用新的实现
+export const sendChatStream = async (options: ChatStreamOptions): Promise<void> => {
+  // 如果提供了传统的endpoint和apiId，使用旧的方式（向后兼容）
+  if (options.endpoint && options.apiId) {
+    const { messages, onUpdate, onComplete, onError, signal } = options;
+
+    let currentContent = '';
+
+    const sseHook = createSSEHook({
+      onData: (data: string) => {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.choices?.[0]?.delta?.content) {
+            currentContent += parsed.choices[0].delta.content;
+            onUpdate(currentContent);
+          }
+        } catch {
+          console.warn('Failed to parse SSE data:', data);
+        }
+      },
+      onCompleted: (error?: Error) => {
+        if (error) {
+          onError(error);
+        } else {
+          onComplete();
+        }
+      },
+      onAborted: () => {
+        console.log('Stream aborted');
+      }
+    });
+
+    try {
+      await ky.post(options.endpoint, {
+        json: {
+          messages: messages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          })),
+          enable_thinking: false
+        },
+        headers: {
+          'X-App-Id': options.apiId,
+          'Content-Type': 'application/json'
+        },
+        signal,
+        hooks: {
+          afterResponse: [sseHook]
+        }
+      });
+    } catch (error) {
+      if (!signal?.aborted) {
+        onError(error as Error);
+      }
+    }
+  } else {
+    // 使用新的AI服务实现
+    await sendChatStreamNew(options);
   }
 };
