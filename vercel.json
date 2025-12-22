@@ -29,16 +29,5 @@
         }
       ]
     }
-  ],
-  "env": {
-    "VITE_AI_PROVIDER": "baidu",
-    "VITE_BAIDU_API_BASE_URL": "https://api-integrations.appmiaoda.com",
-    "VITE_BAIDU_MODEL": "ernie-4.0",
-    "VITE_BAIDU_MAX_TOKENS": "4000",
-    "VITE_BAIDU_TEMPERATURE": "0.7",
-    "VITE_ZHIPU_API_BASE_URL": "https://open.bigmodel.cn/api/paas/v4",
-    "VITE_ZHIPU_MODEL": "glm-4-plus",
-    "VITE_ZHIPU_MAX_TOKENS": "4000",
-    "VITE_ZHIPU_TEMPERATURE": "0.7"
-  }
+  ]
 }
