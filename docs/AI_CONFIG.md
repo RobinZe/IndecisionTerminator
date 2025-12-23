@@ -34,7 +34,7 @@ VITE_AI_PROVIDER=baidu
 #### 百度文心大模型
 
 ```env
-VITE_BAIDU_API_BASE_URL=https://api-integrations.appmiaoda.com
+VITE_BAIDU_API_BASE_URL=https://aip.baidubce.com
 VITE_BAIDU_API_KEY=your_baidu_api_key_here
 VITE_BAIDU_MODEL=ernie-4.0
 ```
@@ -92,7 +92,7 @@ VITE_CUSTOM_MODEL=your-custom-model
 
 | 变量名 | 说明 | 默认值 |
 |--------|------|--------|
-| `VITE_BAIDU_API_BASE_URL` | API基础URL | `https://api-integrations.appmiaoda.com` |
+| `VITE_BAIDU_API_BASE_URL` | API基础URL | `https://aip.baidubce.com` |
 | `VITE_BAIDU_API_KEY` | API密钥 | - |
 | `VITE_BAIDU_MODEL` | 模型名称 | `ernie-4.0` |
 | `VITE_BAIDU_MAX_TOKENS` | 最大令牌数 | `4000` |

@@ -16,7 +16,7 @@ const Header: React.FC = () => {
               {/* Please replace with your website logo */}
               <img
                 className="h-8 w-auto"
-                src={`https://miaoda-site-img.cdn.bcebos.com/placeholder/code_logo_default.png`}
+                src="https://placehold.co/120x32?text=Logo"
                 alt="Website logo"
               />
               {/* Please replace with your website name */}

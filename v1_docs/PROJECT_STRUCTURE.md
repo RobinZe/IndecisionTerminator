@@ -6,7 +6,7 @@
 
 ## 一、项目概览
 
-- 项目名称：秒哒·选择困难终结者（React + TypeScript 前端应用）
+- 项目名称：选择困难终结者（React + TypeScript 前端应用）
 - 功能定位：面向“选择困难症”的辅助工具页面集合（掷骰、转盘、硬币、答案书等），并预留了鉴权、上传、AI 分析等扩展能力
 - 主要技术：Vite、React 18、TypeScript、Tailwind CSS、shadcn/ui、Radix UI、React Router、Supabase
 
@@ -50,7 +50,7 @@
 - main.tsx：前端应用入口文件，挂载 React 应用到 index.html 指定的元素。
 - App.tsx：应用根组件。
   - 使用 React Router（BrowserRouter、Routes、Route、Navigate），集中路由渲染。
-  - 预留了 miaoda-auth-react 的鉴权集成示例（注释内说明了 AuthProvider 和 RequireAuth 的使用要点与白名单配置）。
+  - 可按需接入鉴权方案（如 Supabase Auth），并为需要保护的路由添加白名单配置。
 - routes.tsx：路由配置集中定义，导出 routes，App.tsx 中消费。
 - index.css：全局样式入口（Tailwind 初始化、全局变量、通用样式）。
 - global.d.ts / svg.d.ts / vite-env.d.ts：类型声明文件（全局类型扩展、SVG 模块导入、Vite 环境类型）。
@@ -161,7 +161,7 @@
 
 2) 后端服务与数据能力（可选/拓展）
 - Supabase：
-  - 鉴权：App.tsx 已提供与 miaoda-auth-react 的集成注释说明（AuthProvider/RequireAuth），可基于 Supabase Auth 实现登录保护与白名单路由。
+  - 鉴权：可基于 Supabase Auth 或其他方案实现登录保护与白名单路由。
   - 存储：use-supabase-upload.ts 已集成 Supabase Storage 上传逻辑，支持缓存控制、覆盖（upsert）与多文件选择。
   - 数据库：README 提示可使用 Supabase 官方版本或自部署开源版本，结合 services/ 目录未来接入。
 

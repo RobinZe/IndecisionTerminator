@@ -19,7 +19,7 @@ export type AIProvider = 'baidu' | 'openai' | 'ali' | 'tencent' | 'zhipu' | 'cus
 export function getAIConfig(provider: AIProvider = 'baidu'): AIConfig {
   const configs: Record<AIProvider, AIConfig> = {
     baidu: {
-      baseURL: import.meta.env.VITE_BAIDU_API_BASE_URL || 'https://api-integrations.appmiaoda.com',
+      baseURL: import.meta.env.VITE_BAIDU_API_BASE_URL || 'https://aip.baidubce.com',
       apiKey: import.meta.env.VITE_BAIDU_API_KEY || import.meta.env.VITE_AI_API_KEY || '',
       model: import.meta.env.VITE_BAIDU_MODEL || 'ernie-4.0',
       maxTokens: parseInt(import.meta.env.VITE_BAIDU_MAX_TOKENS || '4000'),
