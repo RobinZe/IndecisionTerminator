@@ -1,7 +1,6 @@
 # 🎯 选择困难终结者
 
-> AI驱动的智能决策辅助工具，让选择变得简单有趣
-> 体验网址：https://indecision.frexpl.me/
+> AI驱动的智能决策辅助工具，让选择变得简单有趣；体验网址：https://indecision.frexpl.me/
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
